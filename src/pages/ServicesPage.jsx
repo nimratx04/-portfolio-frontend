@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API_URL = 'http://localhost:5000/api/services'
+const API_URL = 'http://localhost:5001/api/services'
 
 function ServicesPage() {
   const [services, setServices] = useState([])
