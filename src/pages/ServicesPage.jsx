@@ -1,171 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Briefcase, DollarSign, Clock, Package } from 'lucide-react';
-import { serviceAPI } from '../services/api';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+
+const API_URL = 'http://localhost:5000/api/services'
 
 function ServicesPage() {
-  const [services, setServices] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingService, setEditingService] = useState(null);
-  const [formData, setFormData] = useState({ title: '', description: '', price: '', duration: '' });
-  const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const [editingService, setEditingService] = useState(null)
+  const [formData, setFormData] = useState({ title: '', description: '', price: '', duration: '' })
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetchServices();
-  }, []);
+    fetchServices()
+  }, [])
 
   const fetchServices = async () => {
-    setLoading(true);
     try {
-      const response = await serviceAPI.getAll();
-      setServices(response.data);
+      const res = await axios.get(API_URL)
+      setServices(res.data)
     } catch (error) {
-      toast.error('Failed to fetch services');
-    } finally {
-      setLoading(false);
+      console.error('Error:', error)
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
     try {
       if (editingService) {
-        await serviceAPI.update(editingService._id, formData);
-        toast.success('Service updated successfully');
+        await axios.put(`${API_URL}/${editingService._id}`, formData)
+        alert('Service updated!')
       } else {
-        await serviceAPI.create(formData);
-        toast.success('Service created successfully');
+        await axios.post(API_URL, formData)
+        alert('Service created!')
       }
-      setIsModalOpen(false);
-      setEditingService(null);
-      setFormData({ title: '', description: '', price: '', duration: '' });
-      fetchServices();
+      setShowForm(false)
+      setEditingService(null)
+      setFormData({ title: '', description: '', price: '', duration: '' })
+      fetchServices()
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Operation failed');
-    } finally {
-      setLoading(false);
+      alert('Error: ' + (error.response?.data?.message || 'Something went wrong'))
     }
-  };
+    setLoading(false)
+  }
 
   const handleEdit = (service) => {
-    setEditingService(service);
+    setEditingService(service)
     setFormData({
       title: service.title,
       description: service.description,
       price: service.price || '',
       duration: service.duration || ''
-    });
-    setIsModalOpen(true);
-  };
+    })
+    setShowForm(true)
+  }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this service?')) {
-      setLoading(true);
+    if (confirm('Delete this service?')) {
       try {
-        await serviceAPI.delete(id);
-        toast.success('Service deleted successfully');
-        fetchServices();
+        await axios.delete(`${API_URL}/${id}`)
+        alert('Service deleted!')
+        fetchServices()
       } catch (error) {
-        toast.error('Failed to delete service');
-      } finally {
-        setLoading(false);
+        alert('Delete failed')
       }
     }
-  };
+  }
 
   return (
-    <div className="animate-slide-up">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Services Catalog</h1>
-          <p className="text-gray-600 mt-1">Manage the services you offer to clients</p>
-        </div>
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Services</h1>
+        <button onClick={() => { setShowForm(true); setEditingService(null); setFormData({ title: '', description: '', price: '', duration: '' }) }} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
           Add Service
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {services.map((service) => (
-          <div key={service._id} className="card hover:scale-105 transition-all duration-300 group">
-            <div className="flex justify-between items-start mb-4">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-12 h-12 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleEdit(service)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <Edit2 className="w-4 h-4 text-gray-600" />
-                </button>
-                <button onClick={() => handleDelete(service._id)} className="p-2 hover:bg-red-50 rounded-lg">
-                  <Trash2 className="w-4 h-4 text-red-600" />
-                </button>
-              </div>
+      {showForm && (
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-bold mb-4">{editingService ? 'Edit Service' : 'New Service'}</h2>
+          <form onSubmit={handleSubmit}>
+            <input type="text" placeholder="Title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full border rounded p-2 mb-3" required />
+            <textarea placeholder="Description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border rounded p-2 mb-3" rows="3" required />
+            <input type="number" placeholder="Price ($)" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full border rounded p-2 mb-3" />
+            <input type="text" placeholder="Duration" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="w-full border rounded p-2 mb-3" />
+            <div className="flex gap-2">
+              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" disabled={loading}>{loading ? 'Saving...' : editingService ? 'Update' : 'Create'}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditingService(null) }} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">{service.title}</h3>
-            <p className="text-gray-600 text-sm mb-4">{service.description}</p>
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              {service.price && (
-                <div className="flex items-center gap-1 text-indigo-600 font-semibold">
-                  <DollarSign className="w-4 h-4" />
-                  <span>{service.price}</span>
-                </div>
-              )}
-              {service.duration && (
-                <div className="flex items-center gap-1 text-gray-600 text-sm">
-                  <Clock className="w-4 h-4" />
-                  <span>{service.duration}</span>
-                </div>
-              )}
+          </form>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {services.map(service => (
+          <div key={service._id} className="bg-white p-4 rounded-lg shadow">
+            <h3 className="font-bold text-lg">{service.title}</h3>
+            <p className="text-gray-600 text-sm mt-1">{service.description}</p>
+            {service.price && <p className="text-indigo-600 font-semibold mt-2">${service.price}</p>}
+            {service.duration && <p className="text-gray-500 text-sm">{service.duration}</p>}
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => handleEdit(service)} className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">Edit</button>
+              <button onClick={() => handleDelete(service._id)} className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">Delete</button>
             </div>
           </div>
         ))}
       </div>
 
-      {services.length === 0 && !loading && (
-        <div className="card text-center py-12">
-          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">No services added yet. Add your first service!</p>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">{editingService ? 'Edit Service' : 'Add New Service'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="label">Title *</label>
-                <input type="text" name="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" required />
-              </div>
-              <div className="mb-4">
-                <label className="label">Description *</label>
-                <textarea name="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="input-field" rows="3" required />
-              </div>
-              <div className="mb-4">
-                <label className="label">Price ($)</label>
-                <input type="number" name="price" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="input-field" placeholder="0" />
-              </div>
-              <div className="mb-6">
-                <label className="label">Duration</label>
-                <input type="text" name="duration" value={formData.duration} onChange={(e) => setFormData({ ...formData, duration: e.target.value })} className="input-field" placeholder="e.g., 2 weeks, 1 month" />
-              </div>
-              <div className="flex gap-3">
-                <button type="submit" className="btn-primary flex-1" disabled={loading}>{loading ? 'Saving...' : editingService ? 'Update' : 'Create'}</button>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {services.length === 0 && !showForm && <div className="text-center text-gray-500 py-8">No services yet. Click "Add Service" to get started!</div>}
     </div>
-  );
+  )
 }
 
-export default ServicesPage;
+export default ServicesPage
